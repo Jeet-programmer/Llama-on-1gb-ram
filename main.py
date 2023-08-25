@@ -4,19 +4,23 @@ import requests
 from tqdm import tqdm
 import os
 
+from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
+
+
 import uuid
 
-def isCoverPage():
-    x = os.environ["REPL_ID"]
-    return not (str(uuid.UUID(x, version=4)) == x)
+# def isCoverPage():
+#     x = os.environ["REPL_ID"]
+#     return not (str(uuid.UUID(x, version=4)) == x)
 
-if isCoverPage():
-  print("You cannot run this Repl from a cover page, please Fork it to get it running")
-  exit()
+# if isCoverPage():
+#   print("You cannot run this Repl from a cover page, please Fork it to get it running")
+#   exit()
 
 #Get the model file - you will need Expandable Storage to make this work
 
-if not os.path.isfile('llama-2-7b.ggmlv3.q4_K_S.bin') and not isCoverPage():
+if not os.path.isfile('llama-2-7b.ggmlv3.q4_K_S.bin'):
   print("Downloading Model from HuggingFace")
   url = "https://huggingface.co/TheBloke/Llama-2-7B-GGML/resolve/main/llama-2-7b.ggmlv3.q4_K_S.bin"
   response = requests.get(url, stream=True)
@@ -67,11 +71,26 @@ def complete(prompt, stop=["User", "Assistant"]):
   print('\n')
   return [output, token_count]
 
-while True:
-  question = input("\nWhat is your question? > ")
+
+
+
+app = Flask(__name__)
+
+
+@app.route('/')
+def index():
+  return 'Hello from Flask!'
+@app.route('/q')
+@cross_origin(supports_credentials=True)
+def generate_ans(na=None):
+  n = request.args
+  
+  question = n['query']
   start_time = time.time()
   output, token_count = complete(f'User: {question}\nAssistant: ')
   end_time = time.time()
   execution_time = end_time - start_time
-  print(f"{token_count} tokens generated in {execution_time:.6f} seconds.\n{token_count/execution_time} tokens per second")
-  
+  return jsonify({"Token Count":token_count, "tokens generated in" :execution_time, "Output":output})
+
+
+app.run(host='0.0.0.0', port=81)
